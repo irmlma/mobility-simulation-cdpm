@@ -1,17 +1,18 @@
 import os
 import pickle
 
-import haiku as hk
 import jax
 import numpy as np
 import optax
 from absl import logging
 from flax.training.early_stopping import EarlyStopping
-from jax import jr as jr
 from jax import numpy as jnp
+from jax import random as jr
+
+from cdpm._src.data import as_batch_iterators
 
 
-def get_optimizer(config):
+def _get_optimizer(config):
     warmup_schedule = optax.linear_schedule(
         init_value=config.warmup.start_learning_rate,
         end_value=config.params.learning_rate,
@@ -82,14 +83,20 @@ def get_optimizer(config):
     return optimizer
 
 
-def train(*, FLAGS, run_name, config, batch_fns, model, rng_key, run):
-    rng_seq = hk.PRNGSequence(rng_key)
-    train_iter, val_iter = batch_fns
-
-    params = model.init(
-        next(rng_seq), method="evidence", is_training=True, **train_iter(0)
+def train(rng_key, *, data, model, config, outfolder, run_name="cdpm"):
+    train_iter, val_iter = as_batch_iterators(
+        rng_key=jr.PRNGKey(config.data.rng_key),
+        data=data,
+        batch_size=config.training.batch_size,
+        split=config.training.train_val_split,
+        shuffle=config.training.shuffle_data,
     )
-    optimizer = get_optimizer(config.optimizer)
+
+    init_key, rng_key = jr.split(rng_key)
+    params = model.init(
+        init_key, method="evidence", is_training=True, **train_iter(0)
+    )
+    optimizer = _get_optimizer(config.optimizer)
     opt_state = optimizer.init(params)
 
     @jax.jit
@@ -98,7 +105,7 @@ def train(*, FLAGS, run_name, config, batch_fns, model, rng_key, run):
             evidence = model.apply(
                 params, rng, method="evidence", is_training=True, **batch
             )
-            return -jnp.sum(evidence)
+            return -jnp.mean(evidence)
 
         loss, grads = jax.value_and_grad(loss_fn)(params)
         updates, new_opt_state = optimizer.update(grads, opt_state, params)
@@ -109,23 +116,31 @@ def train(*, FLAGS, run_name, config, batch_fns, model, rng_key, run):
     best_params = params
     best_loss = np.inf
     best_itr = 0
-
-    logging.info("training model")
     early_stop = EarlyStopping(
         min_delta=config.training.early_stopping_delta,
         patience=config.training.early_stopping_patience,
     )
-    idxs = train_iter.idxs
+    train_key, rng_key = jr.split(rng_key)
+
+    logging.info("training model")
     for i in range(config.training.n_iter):
+        epoch_key = jr.fold_in(train_key, i)
+        perm_key, epoch_key = jr.split(epoch_key)
+
         train_loss = 0.0
-        idxs = jr.permutation(next(rng_seq), idxs)
+        idxs = jr.permutation(perm_key, train_iter.idxs)
         for j in range(train_iter.num_batches):
             batch = train_iter(j, idxs)
+            batch_key, epoch_key = jr.split(epoch_key)
             batch_loss, params, opt_state = step(
-                params, opt_state, next(rng_seq), **batch
+                params, opt_state, batch_key, **batch
             )
-            train_loss += batch_loss
-        validation_loss = _validation_loss(params, rng_seq, model, val_iter)
+            train_loss += batch_loss * (
+                    batch["y"].shape[0] / train_iter.num_samples
+            )
+
+        val_key, epoch_key = jr.split(epoch_key)
+        validation_loss = _validation_loss(params, val_key, model, val_iter)
         losses[i] = jnp.array([train_loss, validation_loss])
 
         logging.info(
@@ -144,11 +159,12 @@ def train(*, FLAGS, run_name, config, batch_fns, model, rng_key, run):
             best_params = params.copy()
             best_loss = validation_loss
             best_itr = i
-            save(
+            _save(
                 run_name,
                 {"params": best_params, "loss": best_loss, "itr": best_itr},
                 jnp.vstack(losses)[:i, :],
-                FLAGS,
+                outfolder,
+                config
             )
     losses = jnp.vstack(losses)[:i, :]
     return (
@@ -158,29 +174,34 @@ def train(*, FLAGS, run_name, config, batch_fns, model, rng_key, run):
     )
 
 
-def model_path(FLAGS, run_name):
-    outfile = os.path.join(FLAGS.outfolder, f"{run_name}-params.pkl")
-    return outfile
-
-
-def _validation_loss(params, rng_seq, model, val_iter):
+def _validation_loss(rng_key, params, model, val_iter):
     @jax.jit
-    def _loss_fn(rng, **batch):
-        evidence = model.apply(
+    def loss_fn(rng, **batch):
+        lp = model.apply(
             params, rng, method="evidence", is_training=False, **batch
         )
-        return -jnp.sum(evidence)
+        return -jnp.mean(lp)
 
-    rngs = jr.split(next(rng_seq), val_iter.num_batches)
-    losses = jnp.array(
-        [_loss_fn(rngs[j], **val_iter(j)) for j in range(val_iter.num_batches)]
-    )
-    return jnp.sum(losses)
+    def body_fn(rng, i):
+        batch = val_iter(i)
+        loss = loss_fn(rng, **batch)
+        return loss * (batch["y"].shape[0] / val_iter.num_samples)
+
+    losses = 0.0
+    rngs = jr.split(rng_key, val_iter.num_batches)
+    for i in range(val_iter.num_batches):
+        losses += body_fn(rngs[i], i)
+    return losses
 
 
-def save(run_name, params, losses, FLAGS):
-    obj = {"params": params, "losses": losses, "config": FLAGS.config}
-    outfile = model_path(FLAGS, run_name)
+def _save(run_name, params, losses, outfolder, config):
+    obj = {"params": params, "losses": losses, "config": config}
+    outfile = _model_path(outfolder, run_name)
     logging.info("writing params to: %s", outfile)
     with open(outfile, "wb") as handle:
         pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def _model_path(outfolder, run_name):
+    outfile = os.path.join(outfolder, f"{run_name}-params.pkl")
+    return outfile

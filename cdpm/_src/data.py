@@ -6,7 +6,7 @@ import pandas as pd
 from absl import logging
 from jax import lax
 from jax import numpy as jnp
-from jax import random
+from jax import random as jr
 from sklearn.preprocessing import LabelEncoder
 
 named_dataset = namedtuple("named_dataset", "y")
@@ -16,6 +16,7 @@ class _DataLoader:
     def __init__(self, num_batches, idxs, get_batch):
         self.num_batches = num_batches
         self.idxs = idxs
+        self.num_samples = len(idxs)
         self.get_batch = get_batch
 
     def __call__(self, idx, idxs=None):
@@ -81,7 +82,7 @@ def _as_batch_iterator(
 
     idxs = jnp.arange(n)
     if shuffle:
-        idxs = random.permutation(rng_key, idxs)
+        idxs = jr.permutation(rng_key, idxs)
 
     def get_batch(idx, idxs=idxs):
         start_idx = idx * batch_size
@@ -104,13 +105,13 @@ def as_batch_iterators(*, rng_key, data, batch_size, split, shuffle):
     if shuffle:
         data = named_dataset(
             *[
-                random.permutation(rng_key, el, independent=False)
+                jr.permutation(rng_key, el, independent=False)
                 for _, el in enumerate(data)
             ]
         )
     y_train = named_dataset(*[el[:n_train, :] for el in data])
     y_val = named_dataset(*[el[n_train:, :] for el in data])
-    train_rng_key, val_rng_key = random.split(rng_key)
+    train_rng_key, val_rng_key = jr.split(rng_key)
 
     train_itr = _as_batch_iterator(train_rng_key, y_train, batch_size, shuffle)
     val_itr = _as_batch_iterator(val_rng_key, y_val, batch_size, shuffle)

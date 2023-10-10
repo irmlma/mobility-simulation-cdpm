@@ -25,12 +25,12 @@ flags.DEFINE_string(
 flags.mark_flags_as_required(["params", "infile", "outfolder"])
 
 
-def main(argv):
+def _main(argv):
     del argv
     params = pd.read_pickle(FLAGS.params)
 
     output_size = params["config"].output_size
-    df, data_fn, unique_locations = read_data(FLAGS.infile, output_size)
+    df, _, _ = read_data(FLAGS.infile, output_size)
     model = make_model(params["config"])
 
     sequences = df.groupby("user").head(params["config"].output_size)
@@ -82,4 +82,4 @@ def main(argv):
 
 if __name__ == "__main__":
     jax.config.config_with_absl()
-    app.run(main)
+    app.run(_main)

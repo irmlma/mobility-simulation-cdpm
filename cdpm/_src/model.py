@@ -19,7 +19,7 @@ def _value_to_log_onehot(value, num_categories):
     return value
 
 
-def cosine_alpha_schedule(timesteps, s=0.008):
+def _cosine_alpha_schedule(timesteps, s=0.008):
     steps = timesteps + 1
     x = np.linspace(0, steps, steps)
     alphas_cumprod = np.cos(((x / steps) + s) / (1 + s) * np.pi * 0.5) ** 2
@@ -30,7 +30,7 @@ def cosine_alpha_schedule(timesteps, s=0.008):
     return alphas
 
 
-def sqrt_alpha_schedule(timesteps, s=1e-04):
+def _sqrt_alpha_schedule(timesteps, s=1e-04):
     steps = timesteps + 1
     x = np.linspace(0, steps, steps)
     alphas_cumprod = 1.0 - np.sqrt(x / timesteps + s)
@@ -39,7 +39,7 @@ def sqrt_alpha_schedule(timesteps, s=1e-04):
     return alphas
 
 
-def linear_alpha_schedule(timesteps, b_min=1e-04, b_max=0.02):
+def _linear_alpha_schedule(timesteps, b_min=1e-04, b_max=0.02):
     steps = timesteps + 1
     betas = np.linspace(b_min, b_max, steps)
     alphas = 1.0 - betas
@@ -47,13 +47,13 @@ def linear_alpha_schedule(timesteps, b_min=1e-04, b_max=0.02):
     return alphas
 
 
-def get_alpha_schedule(schedule_name, timesteps):
+def _get_alpha_schedule(schedule_name, timesteps):
     if schedule_name == "cosine":
-        alphas = cosine_alpha_schedule(timesteps)
+        alphas = _cosine_alpha_schedule(timesteps)
     elif schedule_name == "sqrt":
-        alphas = sqrt_alpha_schedule(timesteps)
+        alphas = _sqrt_alpha_schedule(timesteps)
     elif schedule_name == "linear":
-        alphas = linear_alpha_schedule(timesteps)
+        alphas = _linear_alpha_schedule(timesteps)
     else:
         raise ValueError("this schedule does not exist")
     return alphas
@@ -211,7 +211,7 @@ class MobilityDPM(hk.Module):
         if not self._predict_z0:
             pred = self._get_z0_from_prediction(z_t, t, pred)
         loss = jnp.sum(
-            jnp.square(lax.stop_gradient(embedding) - pred), axis=[-2, -1]
+            jnp.square(embedding - pred), axis=[-2, -1]
         )
         return loss
 
@@ -366,7 +366,7 @@ def make_model(config):
             config,
             score_model,
             embedding,
-            get_alpha_schedule(
+            _get_alpha_schedule(
                 config.model.noise_schedule, config.model.n_diffusions
             ),
         )(method, **kwargs)

@@ -5,7 +5,7 @@ from absl import app, flags
 from jax import random as jr
 from ml_collections import config_flags
 
-from cdpm._src.data import as_batch_iterators, read_data
+from cdpm._src.data import read_data
 from cdpm._src.model import make_model
 from cdpm._src.train import train
 
@@ -22,7 +22,7 @@ flags.DEFINE_string(
 flags.mark_flags_as_required(["config", "infile", "outfolder"])
 
 
-def main(argv):
+def _main(argv):
     del argv
     _, data_fn, unique_locations = read_data(
         FLAGS.infile, FLAGS.config.output_size
@@ -30,28 +30,20 @@ def main(argv):
     del _
     FLAGS.config.num_categories = len(unique_locations)
 
-    train_iter, val_iter = as_batch_iterators(
-        rng_key=jr.PRNGKey(FLAGS.config.data.rng_key),
-        data=data_fn(),
-        batch_size=FLAGS.config.training.batch_size,
-        split=FLAGS.config.training.train_val_split,
-        shuffle=FLAGS.config.training.shuffle_data,
-    )
-
     tm = datetime.now().strftime("%Y-%m-%d-%H%M")
     run_name = f"{tm}-cdpm"
 
     model = make_model(FLAGS.config)
     _ = train(
-        FLAGS=FLAGS,
-        run_name=run_name,
-        config=FLAGS.config,
-        batch_fns=(train_iter, val_iter),
+        rng_key=jr.PRNGKey(FLAGS.config.training.rng_key),
+        data=data_fn(),
         model=model,
-        rng_key=FLAGS.config.training.rng_key,
+        config=FLAGS.config,
+        outfolder=FLAGS.outfolder,
+        run_name=run_name,
     )
 
 
 if __name__ == "__main__":
     jax.config.config_with_absl()
-    app.run(main)
+    app.run(_main)
