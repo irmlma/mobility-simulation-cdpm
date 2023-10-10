@@ -1,0 +1,102 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name =  "cdpm"
+description = "Synthetic location trajectories generation using categorical diffusion models"
+authors = [{name = "Simon Dirmeier", email = "fyrbnd@pm.me"}]
+readme = "README.md"
+license = "Apache-2.0"
+homepage = "https://github.com/irmlma/mobility-simulation-cdpm"
+keywords = []
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "chex>=0.1.83",
+    "distrax>=0.1.4",
+    "dm-haiku>=0.0.10",
+    "flax>=0.7.0",
+    "jaxlib>=0.4.13",
+    "jax>=0.4.13",
+    "ml-collections>=0.1.1",
+    "optax>=0.1.5",
+    "surjectors>=0.2.2",
+    "rmsyutls>=0.0.1",
+]
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/irmlma/mobility-simulation-cdpm"
+
+[project.scripts]
+uqma-train = "cdpm.scripts.train:main"
+uqma-predict = "cdpm.scripts.simulate:main"
+
+[tool.hatch.version]
+path = "dmma/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.github",
+    "./gitignore",
+    "/.pre-commit-config.yaml"
+]
+
+[tool.hatch.envs.test]
+dependencies = [
+    "pylint>=2.15.10",
+    "pytest>=7.2.0",
+    "pytest-cov>=4.0.0"
+]
+
+
+[tool.hatch.envs.test.scripts]
+lint = 'pylint cdpm'
+test = 'pytest -v --doctest-modules --cov=./dmma --cov-report=xml dmma '
+
+[tool.black]
+line-length = 80
+extend-ignore = "E203"
+target-version = ['py39']
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 80
+include_trailing_comma = true
+
+[tool.flake8]
+max-line-length = 80
+extend-ignore = ["E203", "W503"]
+per-file-ignores = [
+    '__init__.py:F401',
+]
+
+[tool.pylint.messages_control]
+disable = """
+invalid-name,missing-module-docstring,R0801
+"""
+
+[tool.bandit]
+skips = ["B101"]
