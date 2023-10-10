@@ -19,8 +19,6 @@ pip install git+https://github.com/dirmeier/mobility-simulation-cdpm@<TAG>
 ## Example usage
 
 
-
-
 ## Author
 
-Simon Dirmeier <a href="mailto:fyrbnd@pm.me">fyrbnd@pm.me</a>
+Simon Dirmeier <a href="mailto:sfyrbnd@pm.me">sfyrbnd@pm.me</a>
