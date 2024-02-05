@@ -9,7 +9,7 @@ from flax.training.early_stopping import EarlyStopping
 from jax import numpy as jnp
 from jax import random as jr
 
-from cdpm._src.data import as_batch_iterators
+from cdpm.data import as_batch_iterators
 
 
 def _get_optimizer(config):
@@ -83,7 +83,7 @@ def _get_optimizer(config):
     return optimizer
 
 
-def train(rng_key, *, data, model, config, outfolder, run_name="cdpm"):
+def train(rng_key, *, data, model, config, outfile):
     train_iter, val_iter = as_batch_iterators(
         rng_key=jr.PRNGKey(config.data.rng_key),
         data=data,
@@ -160,10 +160,9 @@ def train(rng_key, *, data, model, config, outfolder, run_name="cdpm"):
             best_loss = validation_loss
             best_itr = i
             _save(
-                run_name,
+                outfile,
                 {"params": best_params, "loss": best_loss, "itr": best_itr},
                 jnp.vstack(losses)[:i, :],
-                outfolder,
                 config
             )
     losses = jnp.vstack(losses)[:i, :]
@@ -194,14 +193,8 @@ def _validation_loss(rng_key, params, model, val_iter):
     return losses
 
 
-def _save(run_name, params, losses, outfolder, config):
+def _save(outfile, params, losses, config):
     obj = {"params": params, "losses": losses, "config": config}
-    outfile = _model_path(outfolder, run_name)
     logging.info("writing params to: %s", outfile)
     with open(outfile, "wb") as handle:
         pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
-def _model_path(outfolder, run_name):
-    outfile = os.path.join(outfolder, f"{run_name}-params.pkl")
-    return outfile
