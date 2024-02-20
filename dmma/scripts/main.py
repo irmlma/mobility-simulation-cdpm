@@ -24,7 +24,7 @@ flags.DEFINE_string("checkpoint", None, "pickle file with training parameters")
 flags.DEFINE_string("outfile", None, "name of the output file")
 flags.DEFINE_integer("n_seqs", 10, "number of generated sequences")
 flags.DEFINE_integer("len_seqs", 50, "length of generated sequences")
-flags.mark_flags_as_required(["config", "infile", "outfile"])
+flags.mark_flags_as_required(["config", "outfile"])
 
 
 def _train():

@@ -48,11 +48,12 @@ To simulate some data, use
 
 ```bash
 docker run -v <<some path>>:/mnt \
-  --mode=predict \
+  --mode=simulate \
   --config=/mnt/<<config.py>> \
-  --infile=/mnt/<<test_dataset.csv>> \
-  --outfile=/mnt/<<outfile.pkl>> \
-  --checkpopint=/mnt/<<checkpoint>>
+  --outfile=/mnt/<<outfile.csv>> \
+  --checkpoint=/mnt/<<checkpoint>> \
+  --n_seqs=10 \
+  --len_seqs=32
 ```
 
 where
@@ -60,9 +61,9 @@ where
 - `<<config.py>>` is the same as above,
 - `<<test_dataset.csv>>` is a data set for which you want to evaluate if it is OoD,
 - `<<outfile.pkl>>` is the name of the outfile,
-- `<<checkpoint>>` is the parameter file obtained through the training (i.e., in this case `<<outfolder>>/params.pkl`).
-
-```
+- `<<checkpoint>>` is the parameter file obtained through the training (i.e., in this case `<<outfolder>>/params.pkl`),
+- `n_seqs` determines the number of generated location trajectories,
+- `len_seqs` is the length of each trajectory.
 
 ## Citation
 
@@ -72,10 +73,11 @@ If you find our work relevant to your research, please consider citing
 @article{dirmeier2024cdpm,
   title={Synthetic location trajectories generation using categorical diffusion models},
   author={Simon Dirmeier and Ye Hong and Fernando Perez-Cruz},
-  year={2024}
+  year={2024},
+  journal={arXiv preprint arXiv:2402.12242}
 }
 ```
 
 ## Author
 
-Simon Dirmeier <a href="mailto:sfyrbnd@pm.me">sfyrbnd@pm.me</a>
+Simon Dirmeier <a href="mailto:sfyrbnd @ pm me">sfyrbnd @ pm me</a>

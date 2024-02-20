@@ -30,8 +30,7 @@ jobs:
             dmma \
             --mode=predict \
             --config=/mnt/configs/config.py \
-            --infile=/mnt/data/x_test.csv \
             --checkpoint=/mnt/params.pkl \
             --outfile=/mnt/whatever.pkl \
             --n_seqs=10 \
-            --len_seqs=100 \
+            --len_seqs=32
