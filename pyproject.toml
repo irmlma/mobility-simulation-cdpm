@@ -88,7 +88,7 @@ per-file-ignores = [
 
 [tool.pylint.messages_control]
 disable = """
-invalid-name,missing-module-docstring,R0801,missing-function-docstring,too-many-locals
+invalid-name,missing-module-docstring,R0801,missing-function-docstring,too-many-locals,unused-argument,missing-class-docstring,too-many-arguments,too-many-instance-attributes,too-few-public-methods,missing-function-docstring
 """
 
 [tool.bandit]

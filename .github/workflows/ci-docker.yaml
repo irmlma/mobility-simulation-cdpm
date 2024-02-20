@@ -21,7 +21,7 @@ jobs:
           docker run -v $(pwd):/mnt \
             dmma \
             --config=/mnt/configs/config.py \
-            --infile=/mnt/data/x_test.csv \
+            --infile=/mnt/data/x_train.csv \
             --outfile=/mnt/params.pkl \
             --config.training.n_iter=1
       - name: Test predict

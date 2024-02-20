@@ -65,7 +65,7 @@ class _Encoder(hk.Module):
         initializer = hk.initializers.VarianceScaling(1.0)
         # causal_mask = np.tril(np.ones((1, 1, seq_len, seq_len)))
         causal_mask = None
-        _, seq_len, model_size = inputs.shape
+        _, _, model_size = inputs.shape
 
         h = inputs
         for _ in range(self.config.num_encoder_layers):
