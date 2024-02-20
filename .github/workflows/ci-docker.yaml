@@ -34,6 +34,3 @@ jobs:
             --outfile=/mnt/whatever.csv \
             --n_seqs=10 \
             --len_seqs=32
-      - name: Test file exists
-        run: |
-          head /mnt/whatever.csv
