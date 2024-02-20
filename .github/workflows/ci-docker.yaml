@@ -24,11 +24,11 @@ jobs:
             --infile=/mnt/data/x_train.csv \
             --outfile=/mnt/params.pkl \
             --config.training.n_iter=1
-      - name: Test predict
+      - name: Test simulate
         run: |
           docker run -v $(pwd):/mnt \
             dmma \
-            --mode=predict \
+            --mode=simulate \
             --config=/mnt/configs/config.py \
             --checkpoint=/mnt/params.pkl \
             --outfile=/mnt/whatever.pkl \
