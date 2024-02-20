@@ -31,6 +31,9 @@ jobs:
             --mode=simulate \
             --config=/mnt/configs/config.py \
             --checkpoint=/mnt/params.pkl \
-            --outfile=/mnt/whatever.pkl \
+            --outfile=/mnt/whatever.csv \
             --n_seqs=10 \
             --len_seqs=32
+      - name: Test file exists
+        run: |
+          head /mnt/whatever.csv
