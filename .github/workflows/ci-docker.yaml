@@ -1,0 +1,36 @@
+name: ci docker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        run: docker build . -t dmma
+      - name: Test train
+        run: |
+          docker run -v $(pwd):/mnt \
+            dmma \
+            --config=/mnt/configs/config.py \
+            --infile=/mnt/data/x_train.csv \
+            --outfile=/mnt/params.pkl \
+            --config.training.n_iter=1
+      - name: Test simulate
+        run: |
+          docker run -v $(pwd):/mnt \
+            dmma \
+            --mode=simulate \
+            --config=/mnt/configs/config.py \
+            --checkpoint=/mnt/params.pkl \
+            --outfile=/mnt/whatever.csv \
+            --n_seqs=10 \
+            --len_seqs=32

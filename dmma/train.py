@@ -1,15 +1,12 @@
-import os
-import pickle
-
 import jax
 import numpy as np
 import optax
 from absl import logging
-from flax.training.early_stopping import EarlyStopping
 from jax import numpy as jnp
 from jax import random as jr
 
-from cdpm._src.data import as_batch_iterators
+from dmma.data import as_batch_iterators
+from dmma.early_stopping import EarlyStopping
 
 
 def _get_optimizer(config):
@@ -83,7 +80,7 @@ def _get_optimizer(config):
     return optimizer
 
 
-def train(rng_key, *, data, model, config, outfolder, run_name="cdpm"):
+def train(rng_key, *, data, model, config):
     train_iter, val_iter = as_batch_iterators(
         rng_key=jr.PRNGKey(config.data.rng_key),
         data=data,
@@ -136,18 +133,16 @@ def train(rng_key, *, data, model, config, outfolder, run_name="cdpm"):
                 params, opt_state, batch_key, **batch
             )
             train_loss += batch_loss * (
-                    batch["y"].shape[0] / train_iter.num_samples
+                batch["y"].shape[0] / train_iter.num_samples
             )
 
         val_key, epoch_key = jr.split(epoch_key)
-        validation_loss = _validation_loss(params, val_key, model, val_iter)
+        validation_loss = _validation_loss(val_key, params, model, val_iter)
         losses[i] = jnp.array([train_loss, validation_loss])
-
         logging.info(
             f"epoch {i} train/val elbo: {train_loss}/{validation_loss}"
         )
-
-        _, early_stop = early_stop.update(validation_loss)
+        early_stop.update(validation_loss)
         if validation_loss is jnp.nan:
             logging.warning("found nan validation loss. breaking")
             break
@@ -159,19 +154,15 @@ def train(rng_key, *, data, model, config, outfolder, run_name="cdpm"):
             best_params = params.copy()
             best_loss = validation_loss
             best_itr = i
-            _save(
-                run_name,
-                {"params": best_params, "loss": best_loss, "itr": best_itr},
-                jnp.vstack(losses)[:i, :],
-                outfolder,
-                config
-            )
-    losses = jnp.vstack(losses)[:i, :]
-    return (
-        {"params": best_params, "loss": best_loss, "itr": best_itr},
-        losses,
-        model,
-    )
+
+    losses = jnp.vstack(losses)[: (i + 1), :]
+    return {
+        "params": best_params,
+        "loss": best_loss,
+        "itr": best_itr,
+        "losses": losses,
+        "config": config,
+    }
 
 
 def _validation_loss(rng_key, params, model, val_iter):
@@ -192,16 +183,3 @@ def _validation_loss(rng_key, params, model, val_iter):
     for i in range(val_iter.num_batches):
         losses += body_fn(rngs[i], i)
     return losses
-
-
-def _save(run_name, params, losses, outfolder, config):
-    obj = {"params": params, "losses": losses, "config": config}
-    outfile = _model_path(outfolder, run_name)
-    logging.info("writing params to: %s", outfile)
-    with open(outfile, "wb") as handle:
-        pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
-def _model_path(outfolder, run_name):
-    outfile = os.path.join(outfolder, f"{run_name}-params.pkl")
-    return outfile

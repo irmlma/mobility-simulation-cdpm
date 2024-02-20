@@ -23,7 +23,6 @@ def get_config():
 
         noise_schedule="cosine",
         predict_z0=True,
-        use_embedding_for_logits=True,
 
         embedding=new_dict(
             embedding_dim=embedding_dim,
@@ -76,6 +75,11 @@ def get_config():
         train_val_split=0.95,
         early_stopping_patience=10,
         early_stopping_delta=100
+    )
+
+    config.simulation = new_dict(
+        rng_key=42,
+        batch_size=64,
     )
 
     config.optimizer = new_dict(
