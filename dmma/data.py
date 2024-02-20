@@ -51,11 +51,11 @@ def read_data(locations_file, output_size):
     df = pd.read_csv(locations_file)
     df = _preprocess(df)
 
-    users = np.unique(df.user.values)
+    users = np.unique(df.user_id.values)
     seqs = [None] * len(users)
 
     for i, user in enumerate(users):
-        user_df = df[df.user == user]
+        user_df = df[df.user_id == user]
         els = user_df.location_id.values
         seqs[i] = _rolling_window(els, output_size, 1)
     seqs = np.vstack(seqs)

@@ -9,8 +9,8 @@ from jax import lax
 from jax import numpy as jnp
 from jax import random
 
-from cdpm._src.nn.score_model import ScoreModel, ScoreModelConfig
-from cdpm._src.nn.transformer import embedder, transformer_encoder
+from dmma.nn.score_model import ScoreModel, ScoreModelConfig
+from dmma.nn.transformer import embedder, transformer_encoder
 
 
 def _value_to_log_onehot(value, num_categories):
@@ -25,8 +25,7 @@ def _cosine_alpha_schedule(timesteps, s=0.008):
     alphas_cumprod = np.cos(((x / steps) + s) / (1 + s) * np.pi * 0.5) ** 2
     alphas_cumprod = alphas_cumprod / alphas_cumprod[0]
     alphas = alphas_cumprod[1:] / alphas_cumprod[:-1]
-    # TODO(simon): adding this leads to numerical errors for me (what?)
-    # alphas = np.clip(alphas, a_min=0.001, a_max=0.9999)
+    alphas = np.clip(alphas, a_min=0.001, a_max=0.9999)
     return alphas
 
 
@@ -70,7 +69,6 @@ class MobilityDPM(hk.Module):
 
         self._predict_z0 = config.model.predict_z0
         self._stop_gradient_at_logits = config.model.stop_gradient_at_logits
-        self._use_embedding_for_logits = config.model.use_embedding_for_logits
         self._use_classier_free_guidance = (
             config.model.score_model.use_classier_free_guidance
         )
@@ -107,9 +105,6 @@ class MobilityDPM(hk.Module):
             * (1.0 - self._alphas_bar_prev)
             / (1.0 - self._alphas_bar)
         )
-
-        if not self._use_embedding_for_logits:
-            self._to_logits = hk.Linear(self._num_categories)
 
     def __call__(self, method="evidence", **kwargs):
         return getattr(self, method)(**kwargs)
@@ -210,9 +205,7 @@ class MobilityDPM(hk.Module):
         )
         if not self._predict_z0:
             pred = self._get_z0_from_prediction(z_t, t, pred)
-        loss = jnp.sum(
-            jnp.square(embedding - pred), axis=[-2, -1]
-        )
+        loss = jnp.sum(jnp.square(embedding - pred), axis=[-2, -1])
         return loss
 
     def _loss_rounding(self, y, z_0, is_training, **kwargs):
@@ -224,13 +217,10 @@ class MobilityDPM(hk.Module):
         return loss
 
     def _as_logits(self, z_0):
-        if not self._use_embedding_for_logits:
-            logits = self._to_logits(z_0)
-        else:
-            logits = self._embedding_fn.weights.T
-            if self._stop_gradient_at_logits:
-                logits = lax.stop_gradient(logits)
-            logits = z_0 @ logits
+        logits = self._embedding_fn.weights.T
+        if self._stop_gradient_at_logits:
+            logits = lax.stop_gradient(logits)
+        logits = z_0 @ logits
         return logits
 
     def _likelihood(self, z_0):

@@ -1,18 +1,18 @@
 # Synthetic location trajectories generation using categorical diffusion models
 
-[![status](http://www.repostatus.org/badges/latest/concept.svg)](http://www.repostatus.org/#concept)
 [![ci](https://github.com/irmlma/mobility-simulation-cdpm/actions/workflows/ci.yaml/badge.svg)](https://github.com/irmlma/mobility-simulation-cdpm/actions/workflows/ci.yaml)
+[![arXiv](https://img.shields.io/badge/arXiv-2402.12242-b31b1b.svg)](https://arxiv.org/abs/2402.12242)
 
 ## About
 
-This repository implements a categorical diffusion probabilistic model for generation of synthetic location trajectories.
+This repository contains library code for training a categorical diffusion probabilistic model for generation of synthetic location trajectories.
 
 ## Installation
 
 To install the latest GitHub <TAG>, just call the following on the command line:
 
 ```bash
-docker build https://github.com/irmlma/ mobility-simulation-cdpm.git#<TAG> -t uqma
+docker build https://github.com/irmlma/ mobility-simulation-cdpm.git#<TAG> -t dmma
 ```
 
 where <TAG> is, e.g., `v0.1.0`.
@@ -28,6 +28,7 @@ docker run dmma --help
 ```
 
 Train the model using the provided config file via:
+dock
 ```bash
 docker run -v <<some path>>:/mnt \
   dmma /
@@ -36,13 +37,15 @@ docker run -v <<some path>>:/mnt \
   --infile=/mnt/<<train_dataset.csv>> \
   --outfile=/mnt/<<outfile.pkl>>
 ```
+
 where
 - `<<some path>` is a local path you want to mount to `/mnt/` to make it accessible to Docker,
 - `<<config.py>>` is a config file that is following the template in `configs/config.py`,
 - `<<train_dataset.csv>>` is a comma-separated file of numerical values which correspond to the features obtained from transforming inputs through a neural network,
 - `<<outfile.pkl>>` is the outfile to which parameter and meta data is saved.
 
-To make predictions for epistemic uncertainty estimates, call:
+To simulate some data, use
+
 ```bash
 docker run -v <<some path>>:/mnt \
   --mode=predict \

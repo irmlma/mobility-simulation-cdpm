@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name =  "cdpm"
+name =  "dmma"
 description = "Synthetic location trajectories generation using categorical diffusion models"
 authors = [{name = "Simon Dirmeier", email = "fyrbnd@pm.me"}]
 readme = "README.md"
@@ -20,10 +20,8 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "chex>=0.1.83",
     "distrax>=0.1.4",
     "dm-haiku>=0.0.10",
-    "flax>=0.7.4",
     "jaxlib>=0.4.18",
     "jax>=0.4.18",
     "ml-collections>=0.1.1",
@@ -36,12 +34,8 @@ dynamic = ["version"]
 [project.urls]
 homepage = "https://github.com/irmlma/mobility-simulation-cdpm"
 
-[project.scripts]
-uqma-train = "cdpm.scripts.train:main"
-uqma-predict = "cdpm.scripts.simulate:main"
-
 [tool.hatch.version]
-path = "cdpm/__init__.py"
+path = "dmma/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -59,7 +53,7 @@ dependencies = [
 
 
 [tool.hatch.envs.test.scripts]
-lint = 'pylint cdpm'
+lint = 'pylint dmma'
 
 [tool.black]
 line-length = 80
@@ -93,12 +87,9 @@ per-file-ignores = [
 ]
 
 [tool.pylint.messages_control]
-disable="""
-R,C,W,E
-"""
-enable = """
-import-error,unused-import
+disable = """
+invalid-name,missing-module-docstring,R0801,missing-function-docstring,too-many-locals
 """
 
 [tool.bandit]
-skips = ["B101"]
+skips = ["B101", "B301", "B403"]
